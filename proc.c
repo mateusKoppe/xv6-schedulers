@@ -88,6 +88,7 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->calls = 0;
 
   release(&ptable.lock);
 
@@ -178,7 +179,7 @@ growproc(int n)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-fork(void)
+fork(int tickets)
 {
   int i, pid;
   struct proc *np;
@@ -188,6 +189,11 @@ fork(void)
   if((np = allocproc()) == 0){
     return -1;
   }
+
+  np->tickets = tickets;
+  if (np->tickets > 0) np->stride = (int)(STRIDE_CONST/np->tickets);
+  else np->stride = 0;
+  np->pass = 0;
 
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
@@ -311,6 +317,37 @@ wait(void)
   }
 }
 
+// Reset pass of procs to stride
+void overflow_stride(){
+  struct proc *p;
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    p->pass = p->stride;
+  }
+}
+
+// Find the smallest pass PID
+int find_smallest_pass_pid(){
+  struct proc *p;
+  int pid = 0;
+  int smallest = INT_MAX;
+
+  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if (p->state != RUNNABLE) continue;
+
+    if (p->pass < smallest){
+      smallest = p->pass;
+      pid = p->pid;
+    }
+
+    if (p->pid == 0) break;
+  }
+
+  return pid;
+}
+
+
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -332,9 +369,22 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    int next_pid = find_smallest_pass_pid();
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
+
+      if (p->pid != next_pid) continue;
+      p->calls++;
+
+      if (p->pass >= INT_MAX) overflow_stride();
+      if (p->pass < 0) overflow_stride();
+
+
+      p->pass += p->stride;
+
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it

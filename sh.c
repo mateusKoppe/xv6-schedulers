@@ -179,11 +179,11 @@ panic(char *s)
 }
 
 int
-fork1(void)
+fork1(int tickets)
 {
   int pid;
 
-  pid = fork();
+  pid = fork(tickets);
   if(pid == -1)
     panic("fork");
   return pid;

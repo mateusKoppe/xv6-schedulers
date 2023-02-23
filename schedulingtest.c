@@ -4,6 +4,9 @@
 #include "types.h"
 #include "user.h"
 
+#define SEARCH_NTH_PRIME 250000
+
+// Worst possible implementation to find a prime
 int is_prime(int number) {
   int i;
   for (i = 2; i * i <= number; i++) {
@@ -13,8 +16,6 @@ int is_prime(int number) {
   return 1;
 }
 
-
-int anti_optimization = 0;
 int nth_prime(int n) {
   int counter = 0;
   int i;
@@ -24,7 +25,7 @@ int nth_prime(int n) {
     if (is_prime(i)) {
       counter++;
       if (counter == (n - 1)) {
-        anti_optimization++;
+        printf(1, "", i); // Anti optimization
         return i;
       }
     }
@@ -35,29 +36,16 @@ void testscheduling(void) {
   int pid;
 
   printf(1, "schedulingtest - the next lines should be displayed in order\n");
+  int tickets[] = { 40, 20, 10 };
+  int tickets_amount = sizeof(tickets)/sizeof(tickets[0]);
 
-  // Criando o primeiro processo
-  pid = fork(40);
-  if (pid == 0) {
-    nth_prime(250000);
-    printf(1, "1 - proccess finished.\n");
-    exit();
-  }
-
-  // Criando o segundo processo
-  pid = fork(20);
-  if (pid == 0) {
-    nth_prime(250000);
-    printf(1, "2 - proccess finished.\n");
-    exit();
-  }
-
-  // Criando o terceiro processo
-  pid = fork(10);
-  if (pid == 0) {
-    nth_prime(250000);
-    printf(1, "3 - proccess finished!\n");
-    exit();
+  for (int i = 0; i < tickets_amount; i++) {
+    pid = fork(tickets[i]);
+    if (pid == 0) {
+      nth_prime(SEARCH_NTH_PRIME);
+      printf(1, "%d - proccess finished.\n", i+1);
+      exit();
+    }
   }
 }
 

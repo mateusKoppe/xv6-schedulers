@@ -14,3 +14,4 @@
 #define STRIDE_CONST 10000 // constant for strides
 #define INT_MAX      2147483647
 #define STIDE_INT_MAX (INT_MAX - (STRIDE_CONST * 2))
+#define TICKETS_DEFAULT 10

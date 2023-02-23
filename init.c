@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "stat.h"
+#include "param.h"
 #include "user.h"
 #include "fcntl.h"
 
@@ -21,7 +22,7 @@ main(void)
 
   for(;;){
     printf(1, "init: starting sh\n");
-    pid = fork(1);
+    pid = fork(TICKETS_DEFAULT);
     if(pid < 0){
       printf(1, "init: fork failed\n");
       exit();

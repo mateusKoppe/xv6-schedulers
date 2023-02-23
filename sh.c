@@ -3,6 +3,7 @@
 #include "types.h"
 #include "user.h"
 #include "fcntl.h"
+#include "param.h"
 
 // Parsed command representation
 #define EXEC  1
@@ -49,7 +50,7 @@ struct backcmd {
   struct cmd *cmd;
 };
 
-int fork1(void);  // Fork but panics on failure.
+int fork1(int);  // Fork but panics on failure.
 void panic(char*);
 struct cmd *parsecmd(char*);
 
@@ -91,7 +92,7 @@ runcmd(struct cmd *cmd)
 
   case LIST:
     lcmd = (struct listcmd*)cmd;
-    if(fork1() == 0)
+    if(fork1(TICKETS_DEFAULT) == 0)
       runcmd(lcmd->left);
     wait();
     runcmd(lcmd->right);
@@ -101,14 +102,14 @@ runcmd(struct cmd *cmd)
     pcmd = (struct pipecmd*)cmd;
     if(pipe(p) < 0)
       panic("pipe");
-    if(fork1() == 0){
+    if(fork1(TICKETS_DEFAULT) == 0){
       close(1);
       dup(p[1]);
       close(p[0]);
       close(p[1]);
       runcmd(pcmd->left);
     }
-    if(fork1() == 0){
+    if(fork1(TICKETS_DEFAULT) == 0){
       close(0);
       dup(p[0]);
       close(p[0]);
@@ -123,7 +124,7 @@ runcmd(struct cmd *cmd)
 
   case BACK:
     bcmd = (struct backcmd*)cmd;
-    if(fork1() == 0)
+    if(fork1(TICKETS_DEFAULT) == 0)
       runcmd(bcmd->cmd);
     break;
   }
@@ -164,7 +165,7 @@ main(void)
         printf(2, "cannot cd %s\n", buf+3);
       continue;
     }
-    if(fork1() == 0)
+    if(fork1(TICKETS_DEFAULT) == 0)
       runcmd(parsecmd(buf));
     wait();
   }

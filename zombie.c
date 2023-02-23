@@ -4,11 +4,12 @@
 #include "types.h"
 #include "stat.h"
 #include "user.h"
+#include "param.h"
 
 int
 main(void)
 {
-  if(fork(1) > 0)
+  if(fork(TICKETS_DEFAULT) > 0)
     sleep(5);  // Let child exit before parent.
   exit();
 }

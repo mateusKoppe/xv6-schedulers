@@ -6,6 +6,7 @@
 #include "x86.h"
 #include "proc.h"
 #include "spinlock.h"
+#include "rand.h"
 
 struct {
   struct spinlock lock;
@@ -88,6 +89,8 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->calls = 0;
+  p->tickets = TICKETS_DEFAULT;
 
   release(&ptable.lock);
 
@@ -178,7 +181,7 @@ growproc(int n)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-fork(void)
+fork(int tickets)
 {
   int i, pid;
   struct proc *np;
@@ -196,6 +199,8 @@ fork(void)
     np->state = UNUSED;
     return -1;
   }
+  cprintf("reiciving %d tickets", tickets);
+  np->tickets = tickets;
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
@@ -311,6 +316,20 @@ wait(void)
   }
 }
 
+int
+lottery_total (void)
+{
+  struct proc *p;
+  int ticket_count=0;
+
+  for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+    if(p->state == RUNNABLE){
+      ticket_count += p->tickets;
+    }
+  }
+  return ticket_count;
+}
+
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -325,6 +344,7 @@ scheduler(void)
   struct proc *p;
   struct cpu *c = mycpu();
   c->proc = 0;
+  int count, selected_ticket, total_tickets;
   
   for(;;){
     // Enable interrupts on this processor.
@@ -332,10 +352,21 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
+
+    count = 0;
+    total_tickets = lottery_total();
+    selected_ticket = random_at_most(total_tickets);
+
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
 
+      if ((count + p->tickets) < selected_ticket) {
+        count += p->tickets;
+        continue;
+      }
+
+      p->calls++;
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
       // before jumping back to us.
@@ -349,6 +380,7 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
+      break;
     }
     release(&ptable.lock);
 
@@ -523,7 +555,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("%d %s %s", p->pid, state, p->name);
+    cprintf("PID=%d STATE=%s NAME=%s TICKETS=%d CALLS=%d", p->pid, state, p->name, p->tickets, p->calls);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)

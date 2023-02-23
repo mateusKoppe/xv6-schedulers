@@ -6,11 +6,12 @@
 #include "memlayout.h"
 #include "mmu.h"
 #include "proc.h"
+#include "param.h"
 
 int
 sys_fork(void)
 {
-  return fork();
+  return fork(TICKETS_DEFAULT);
 }
 
 int

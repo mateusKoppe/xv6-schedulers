@@ -90,7 +90,6 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->calls = 0;
-  p->tickets = TICKETS_DEFAULT;
 
   release(&ptable.lock);
 
@@ -192,6 +191,14 @@ fork(int tickets)
     return -1;
   }
 
+  if (tickets > TICKETS_MAX) {
+    np->tickets = TICKETS_MAX;
+  } else if (tickets < TICKETS_MIN) {
+    np->tickets = TICKETS_MIN;
+  } else {
+    np->tickets = tickets;
+  }
+
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
     kfree(np->kstack);
@@ -199,8 +206,6 @@ fork(int tickets)
     np->state = UNUSED;
     return -1;
   }
-  cprintf("reiciving %d tickets", tickets);
-  np->tickets = tickets;
   np->sz = curproc->sz;
   np->parent = curproc;
   *np->tf = *curproc->tf;
@@ -380,7 +385,6 @@ scheduler(void)
       // Process is done running for now.
       // It should have changed its p->state before coming back.
       c->proc = 0;
-      break;
     }
     release(&ptable.lock);
 

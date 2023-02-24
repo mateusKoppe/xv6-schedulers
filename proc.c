@@ -191,8 +191,7 @@ fork(int tickets)
   }
 
   np->tickets = tickets;
-  if (np->tickets > 0) np->stride = (int)(STRIDE_CONST/np->tickets);
-  else np->stride = 0;
+  np->stride = (int)(STRIDE_CONST/np->tickets);
   np->pass = 0;
 
   // Copy process state from proc.
@@ -379,7 +378,7 @@ scheduler(void)
       if (p->pid != next_pid) continue;
       p->calls++;
 
-      if (p->pass >= INT_MAX) overflow_stride();
+      if (p->pass >= STRIDE_INT_MAX) overflow_stride();
       if (p->pass < 0) overflow_stride();
 
 

@@ -4,7 +4,7 @@
 #include "types.h"
 #include "user.h"
 
-#define SEARCH_NTH_PRIME 250000
+#define SEARCH_NTH_PRIME 10000
 
 // Worst possible implementation to find a prime
 int is_prime(int number) {
@@ -46,10 +46,12 @@ void testscheduling(void) {
       printf(1, "%d - proccess finished.\n", i+1);
       exit();
     }
+    wait();
   }
 }
 
 int main(void) {
   testscheduling();
+  wait();
   exit();
 }

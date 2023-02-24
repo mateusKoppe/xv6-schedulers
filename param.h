@@ -12,5 +12,5 @@
 #define NBUF         (MAXOPBLOCKS*3)  // size of disk block cache
 #define FSSIZE       1000  // size of file system in blocks
 #define TICKETS_DEFAULT 10 // default amount of tickets to forks
-#define TICKETS_MAX 20 // Max amount of tickets to forks
+#define TICKETS_MAX 200 // Max amount of tickets to forks
 #define TICKETS_MIN 1 // Min amount of tickets to forks

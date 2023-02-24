@@ -190,7 +190,14 @@ fork(int tickets)
     return -1;
   }
 
-  np->tickets = tickets;
+  if (tickets > STRIDE_MAX_TICKET) {
+    np->tickets = STRIDE_MAX_TICKET;
+  } else if (tickets < STRIDE_MIN_TICKET) {
+    np->tickets = STRIDE_MIN_TICKET;
+  } else {
+    np->tickets = tickets;
+  }
+
   np->stride = (int)(STRIDE_CONST/np->tickets);
   np->pass = 0;
 

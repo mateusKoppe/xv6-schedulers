@@ -88,7 +88,6 @@ allocproc(void)
 found:
   p->state = EMBRYO;
   p->pid = nextpid++;
-  p->calls = 0;
 
   release(&ptable.lock);
 
@@ -179,7 +178,7 @@ growproc(int n)
 // Sets up stack to return as if from system call.
 // Caller must set state of returned proc to RUNNABLE.
 int
-fork(int tickets)
+fork(void)
 {
   int i, pid;
   struct proc *np;
@@ -189,17 +188,6 @@ fork(int tickets)
   if((np = allocproc()) == 0){
     return -1;
   }
-
-  if (tickets > STRIDE_MAX_TICKET) {
-    np->tickets = STRIDE_MAX_TICKET;
-  } else if (tickets < STRIDE_MIN_TICKET) {
-    np->tickets = STRIDE_MIN_TICKET;
-  } else {
-    np->tickets = tickets;
-  }
-
-  np->stride = (int)(STRIDE_CONST/np->tickets);
-  np->pass = 0;
 
   // Copy process state from proc.
   if((np->pgdir = copyuvm(curproc->pgdir, curproc->sz)) == 0){
@@ -323,37 +311,6 @@ wait(void)
   }
 }
 
-// Reset pass of procs to stride
-void overflow_stride(){
-  struct proc *p;
-
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    p->pass = p->stride;
-  }
-}
-
-// Find the smallest pass PID
-int find_smallest_pass_pid(){
-  struct proc *p;
-  int pid = 0;
-  int smallest = INT_MAX;
-
-  for (p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-    if (p->state != RUNNABLE) continue;
-
-    if (p->pass < smallest){
-      smallest = p->pass;
-      pid = p->pid;
-    }
-
-    if (p->pid == 0) break;
-  }
-
-  return pid;
-}
-
-
-
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -375,22 +332,9 @@ scheduler(void)
 
     // Loop over process table looking for process to run.
     acquire(&ptable.lock);
-
-    int next_pid = find_smallest_pass_pid();
-
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
       if(p->state != RUNNABLE)
         continue;
-
-      if (p->pid != next_pid) continue;
-      p->calls++;
-
-      if (p->pass >= STRIDE_INT_MAX) overflow_stride();
-      if (p->pass < 0) overflow_stride();
-
-
-      p->pass += p->stride;
-
 
       // Switch to chosen process.  It is the process's job
       // to release ptable.lock and then reacquire it
@@ -579,7 +523,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    cprintf("PID=%d STATE=%s NAME=%s TICKETS=%d STRIDE=%d PASS=%d CALLS=%d", p->pid, state, p->name, p->tickets, p->stride, p->pass, p->calls);
+    cprintf("%d %s %s", p->pid, state, p->name);
     if(p->state == SLEEPING){
       getcallerpcs((uint*)p->context->ebp+2, pc);
       for(i=0; i<10 && pc[i] != 0; i++)
